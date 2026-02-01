@@ -42,25 +42,26 @@ export function Dashboard() {
                 setAvailableYears([currentYear]);
             });
 
-        // Fetch Goals
-        endpoints.getGoals().then(res => setGoals(res.data)).catch(console.error);
-        // Fetch Subscriptions (for stats)
-        endpoints.getSubscriptions().then(res => setSubscriptions(res.data)).catch(console.error);
+        // Fetch Goals and Subscriptions are now handled in the main aggregated call
+        // Separate calls removed
     }, []);
 
     useEffect(() => {
-        // Fetch Summary (Pie) & Trends (Bar) when filters change
+        // Fetch All Dashboard Data (Summary, Trends, Goals, Subscriptions)
         const loadDashboardData = async () => {
             setLoadingSummary(true);
             try {
-                const [sumRes, trendRes] = await Promise.all([
-                    endpoints.getSummary({ year: selectedYear, month: selectedMonth }),
-                    endpoints.getMonthlySummary({ year: selectedYear })
-                ]);
-                setSummary(sumRes.data);
-                setTrends(trendRes.data);
+                // Single API Call
+                const res = await endpoints.getDashboardData({ year: selectedYear, month: selectedMonth });
+
+                const { summary, trends, goals, subscriptions } = res.data;
+
+                setSummary(summary);
+                setTrends(trends);
+                setGoals(goals);
+                setSubscriptions(subscriptions);
             } catch (err) {
-                console.error(err);
+                console.error("Failed to load dashboard data:", err);
             } finally {
                 setLoadingSummary(false);
             }

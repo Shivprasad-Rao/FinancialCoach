@@ -1,13 +1,14 @@
 import axios from 'axios';
 
-// Backend URL - typically localhost:3000 for local dev
-const API_URL = 'http://localhost:3000/api';
+// Backend URL - from environment variable
+const API_URL = import.meta.env.VITE_API_URL;
 
 export const api = axios.create({
     baseURL: API_URL,
     headers: {
         'Content-Type': 'application/json',
     },
+    withCredentials: true,
 });
 
 // Request interceptor for API calls
@@ -37,6 +38,7 @@ export const endpoints = {
     createGoal: (data: any) => api.post('/goals', data),
     updateGoal: (id: number, amount: number) => api.put(`/goals/${id}`, { current_amount: amount }),
     deleteGoal: (id: number) => api.delete(`/goals/${id}`),
+    getDashboardData: (params?: { year?: string, month?: string }) => api.get('/dashboard', { params }),
 
     getInsights: () => api.get('/insights'),
     getAdvice: () => api.post('/advisor/analyze'),
