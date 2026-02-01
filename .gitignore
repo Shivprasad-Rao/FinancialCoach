@@ -1,0 +1,5 @@
+/smart_financial_coach_prd.md
+/tech_stack_recommendation.md
+node_modules/
+.env
+*.db*
