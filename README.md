@@ -1,7 +1,10 @@
 # Smart Financial Coach
----
+
 Submission for Case Study
-YouTube Link: *https://youtu.be/YDKVGIP0_Mw*
+
+YouTube Link: *<https://youtu.be/YDKVGIP0_Mw>*
+
+
 ---
 
 ## 1. Executive Summary
