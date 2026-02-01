@@ -31,7 +31,11 @@ import advisorRouter from './routes/advisor';
 import debugRouter from './routes/debug';
 import authRouter from './routes/auth';
 
-app.use(cors());
+app.use(cors({
+    origin: process.env.FRONTEND_URL, // Allow Frontend
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'UPDATE', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json({ limit: '10mb' }));
 
 app.use('/api/auth', authRouter);
