@@ -28,9 +28,11 @@ export function Layout({ children }: LayoutProps) {
             <aside className="w-64 bg-card border-r border-border hidden md:flex flex-col">
                 <div className="p-6">
                     <h1 className="text-2xl font-bold text-red-accent">
-                        FinCoach
+                        FinancialCoach
                     </h1>
                     <p className="text-xs text-muted-foreground mt-1">Smart Financial Companion</p>
+                    <p className="text-xs text-muted-foreground mt-1">PANW Hackathon</p>
+                    <p className="text-xs text-muted-foreground mt-1">By Shivprasad</p>
                 </div>
 
                 {user && (
