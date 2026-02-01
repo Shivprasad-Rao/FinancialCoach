@@ -99,10 +99,10 @@ export function Dashboard() {
                     <select
                         value={selectedYear}
                         onChange={(e) => setSelectedYear(e.target.value)}
-                        className="bg-transparent border-none text-sm font-medium focus:ring-0 text-gray-700 dark:text-gray-200"
+                        className="bg-transparent border-none text-sm font-medium focus:ring-0 text-foreground cursor-pointer"
                     >
                         {availableYears.map(year => (
-                            <option key={year} value={year}>{year}</option>
+                            <option key={year} value={year} className="bg-background text-foreground">{year}</option>
                         ))}
                     </select>
                 </div>
@@ -160,21 +160,21 @@ export function Dashboard() {
                         <select
                             value={selectedMonth}
                             onChange={(e) => setSelectedMonth(e.target.value)}
-                            className="border border-gray-800 p-1 rounded-md text-sm font-medium focus:ring-0 text-gray-700 dark:text-gray-200"
+                            className="border border-input p-1 rounded-md text-sm font-medium focus:ring-0 text-foreground bg-background cursor-pointer"
                         >
-                            <option value="">Full Year</option>
-                            <option value="01">January</option>
-                            <option value="02">February</option>
-                            <option value="03">March</option>
-                            <option value="04">April</option>
-                            <option value="05">May</option>
-                            <option value="06">June</option>
-                            <option value="07">July</option>
-                            <option value="08">August</option>
-                            <option value="09">September</option>
-                            <option value="10">October</option>
-                            <option value="11">November</option>
-                            <option value="12">December</option>
+                            <option value="" className="bg-background text-foreground">Full Year</option>
+                            <option value="01" className="bg-background text-foreground">January</option>
+                            <option value="02" className="bg-background text-foreground">February</option>
+                            <option value="03" className="bg-background text-foreground">March</option>
+                            <option value="04" className="bg-background text-foreground">April</option>
+                            <option value="05" className="bg-background text-foreground">May</option>
+                            <option value="06" className="bg-background text-foreground">June</option>
+                            <option value="07" className="bg-background text-foreground">July</option>
+                            <option value="08" className="bg-background text-foreground">August</option>
+                            <option value="09" className="bg-background text-foreground">September</option>
+                            <option value="10" className="bg-background text-foreground">October</option>
+                            <option value="11" className="bg-background text-foreground">November</option>
+                            <option value="12" className="bg-background text-foreground">December</option>
                         </select>
                     </div>
 

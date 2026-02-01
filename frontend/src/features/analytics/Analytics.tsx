@@ -56,9 +56,9 @@ export function Analytics() {
                     <select
                         value={selectedYear}
                         onChange={(e) => setSelectedYear(e.target.value)}
-                        className="bg-transparent border-none text-sm font-medium focus:ring-0 text-foreground"
+                        className="bg-transparent border-none text-sm font-medium focus:ring-0 text-foreground cursor-pointer"
                     >
-                        {years.map(y => <option key={y} value={y}>{y}</option>)}
+                        {years.map(y => <option key={y} value={y} className="bg-background text-foreground">{y}</option>)}
                     </select>
                 </div>
             </div>
