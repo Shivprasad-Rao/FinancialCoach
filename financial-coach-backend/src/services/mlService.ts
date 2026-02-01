@@ -21,27 +21,27 @@ interface MLInsights {
     };
 }
 
-export function getMLInsights(year: string, month: string): MLInsights {
+export function getMLInsights(userId: number, year: string, month: string): MLInsights {
     const anchorDate = `${year}-${month}-01`;
 
     // 1. Prediction (Linear Regression on last 6 months)
-    const prediction = predictNextMonth(year, month);
+    const prediction = predictNextMonth(userId, year, month);
 
     // 2. Anomaly Detection (Z-Score on categories)
-    const anomalies = detectAnomalies(year, month);
+    const anomalies = detectAnomalies(userId, year, month);
 
     // 3. Smart Budget (50/30/20 Rule Analysis)
-    const budget = analyzeBudget(year, month);
+    const budget = analyzeBudget(userId, year, month);
 
     return { prediction, anomalies, budget };
 }
 
-function predictNextMonth(year: string, month: string) {
+function predictNextMonth(userId: number, year: string, month: string) {
     // Get last 6 months of total expenses
     const stmt = db.prepare(`
         SELECT strftime('%Y-%m', date) as m, SUM(ABS(amount)) as total
         FROM transactions
-        WHERE amount < 0 AND date < date(?, 'start of month')
+        WHERE amount < 0 AND user_id = ? AND date < date(?, 'start of month')
         GROUP BY m
         ORDER BY m DESC
         LIMIT 6
@@ -49,7 +49,7 @@ function predictNextMonth(year: string, month: string) {
 
     // SQLite date modifier usage: construct a proper date string for the modifier
     const targetDate = `${year}-${month}-01`;
-    const rows = stmt.all(targetDate) as { m: string, total: number }[];
+    const rows = stmt.all(userId, targetDate) as { m: string, total: number }[];
 
     if (rows.length < 3) {
         return { nextMonthAmount: 0, trend: 'stable' as const, confidence: 0 };
@@ -89,49 +89,19 @@ function predictNextMonth(year: string, month: string) {
     };
 }
 
-function detectAnomalies(year: string, month: string) {
+function detectAnomalies(userId: number, year: string, month: string) {
     const targetDate = `${year}-${month}-01`;
-
-    // Get stats for categories over last 6 months (excluding current)
-    const statsStmt = db.prepare(`
-        SELECT 
-            category, 
-            AVG(monthly_total) as avg_amount,
-            (
-                SUM((monthly_total - sub.avg_monthly_total) * (monthly_total - sub.avg_monthly_total)) / (COUNT(monthly_total) - 1)
-            ) as variance
-        FROM (
-            SELECT category, strftime('%Y-%m', date) as m, SUM(ABS(amount)) as monthly_total
-            FROM transactions
-            WHERE amount < 0 AND date < date(?, 'start of month') AND date >= date(?, '-6 months')
-            GROUP BY category, m
-        )
-        JOIN (
-             SELECT category as cat, AVG(monthly_total_inner) as avg_monthly_total
-             FROM (
-                SELECT category, strftime('%Y-%m', date) as m, SUM(ABS(amount)) as monthly_total_inner
-                FROM transactions
-                WHERE amount < 0 AND date < date(?, 'start of month') AND date >= date(?, '-6 months')
-                GROUP BY category, m
-             )
-             GROUP BY cat
-        ) sub ON category = sub.cat
-        GROUP BY category
-    `);
-
-    // Note: Variance calc in pure SQL is verbose, for simplicity let's do JS calc if list is small, 
-    // but here I attempted a nested SQL approach. Actually, standard dev is sqrt(variance).
 
     // Simpler approach: Get all monthly totals for last 6 months per category, then compute in JS
     const historyStmt = db.prepare(`
         SELECT category, SUM(ABS(amount)) as total
         FROM transactions
-        WHERE amount < 0 AND date < date(?, 'start of month') AND date >= date(?, '-6 months')
+        WHERE amount < 0 AND user_id = ? AND date < date(?, 'start of month') AND date >= date(?, '-6 months')
         GROUP BY category, strftime('%Y-%m', date)
     `);
 
     interface HistoryRow { category: string; total: number; }
-    const history = historyStmt.all(targetDate, targetDate) as HistoryRow[];
+    const history = historyStmt.all(userId, targetDate, targetDate) as HistoryRow[];
 
     // Group by category
     const catHistory: Record<string, number[]> = {};
@@ -144,10 +114,10 @@ function detectAnomalies(year: string, month: string) {
     const currentStmt = db.prepare(`
         SELECT category, SUM(ABS(amount)) as total
         FROM transactions
-        WHERE amount < 0 AND strftime('%Y-%m', date) = ?
+        WHERE amount < 0 AND user_id = ? AND strftime('%Y-%m', date) = ?
         GROUP BY category
     `);
-    const currentData = currentStmt.all(`${year}-${month}`) as HistoryRow[];
+    const currentData = currentStmt.all(userId, `${year}-${month}`) as HistoryRow[];
 
     const anomalies: any[] = [];
 
@@ -176,7 +146,7 @@ function detectAnomalies(year: string, month: string) {
     return anomalies.sort((a, b) => b.zScore - a.zScore);
 }
 
-function analyzeBudget(year: string, month: string) {
+function analyzeBudget(userId: number, year: string, month: string) {
     const targetMonth = `${year}-${month}`;
 
     // Get Income and Expenses
@@ -186,12 +156,12 @@ function analyzeBudget(year: string, month: string) {
             SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END) as expense,
             category
         FROM transactions
-        WHERE strftime('%Y-%m', date) = ?
+        WHERE user_id = ? AND strftime('%Y-%m', date) = ?
         GROUP BY category
     `);
 
     interface Row { income: number; expense: number; category: string }
-    const rows = stmt.all(targetMonth) as Row[];
+    const rows = stmt.all(userId, targetMonth) as Row[];
 
     const totalIncome = rows.reduce((acc, r) => acc + r.income, 0);
 

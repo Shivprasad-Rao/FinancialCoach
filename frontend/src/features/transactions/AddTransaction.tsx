@@ -77,7 +77,10 @@ export function AddTransaction({ onCancel, onSuccess }: AddTransactionProps) {
         e.preventDefault();
         setUploading(true);
         try {
-            await endpoints.addManualTransaction(manualData);
+            await endpoints.addManualTransaction({
+                ...manualData,
+                amount: parseFloat(manualData.amount)
+            });
             setSuccessData({ count: 1 });
             setUploading(false);
             setTimeout(() => onSuccess(), 1500);

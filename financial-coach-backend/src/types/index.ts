@@ -24,6 +24,7 @@ export interface Subscription {
     frequency: string;
     last_charge_date: string;
     is_active: boolean;
+    confidence?: number; // 0-100 score of how likely this is a subscription
 }
 
 export interface Goal {

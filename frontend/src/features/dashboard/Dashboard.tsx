@@ -224,7 +224,7 @@ export function Dashboard() {
                                         <div className="flex items-center gap-2 mb-1">
                                             <span className="text-xs font-bold uppercase tracking-wider text-yellow-600 dark:text-yellow-400">{insight.type}</span>
                                         </div>
-                                        <h4 className="font-bold text-gray-800 dark:text-white text-sm mb-1 line-clamp-1">{insight.title}</h4>
+                                        <h4 className="font-bold text-gray-800 dark:text-white text-sm mb-1">{insight.title}</h4>
                                         <p className="text-xs text-gray-600 dark:text-gray-400 leading-snug">{insight.message}</p>
                                     </div>
                                 );

@@ -1,19 +1,19 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import { parseTransactions } from '../services/csvParser';
 import db from '../database/db';
 import { Transaction } from '../types';
 import { getMLInsights } from '../services/mlService';
+import { validate, csvUploadSchema, manualTransactionSchema } from '../middleware/validation';
+import { authenticateToken, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
 // POST /api/transactions/upload
 // Receives JSON: { csvContent: string }
-router.post('/upload', (req, res) => {
+router.post('/upload', authenticateToken, validate(csvUploadSchema), (req: AuthRequest, res: Response) => {
     try {
         const { csvContent } = req.body;
-        if (!csvContent) {
-            return res.status(400).json({ error: 'No CSV content provided' });
-        }
+        const userId = req.user!.id;
 
         const transactions = parseTransactions(csvContent);
 
@@ -32,13 +32,14 @@ router.post('/upload', (req, res) => {
 
         // Insert into DB
         const insert = db.prepare(`
-      INSERT INTO transactions (date, description, amount, category, merchant, transaction_type, account_name, is_recurring)
-      VALUES (@date, @description, @amount, @category, @merchant, @transactionType, @accountName, @is_recurring)
+      INSERT INTO transactions (user_id, date, description, amount, category, merchant, transaction_type, account_name, is_recurring)
+      VALUES (@user_id, @date, @description, @amount, @category, @merchant, @transactionType, @accountName, @is_recurring)
     `);
 
         const insertMany = db.transaction((txs: Transaction[]) => {
             for (const tx of txs) {
                 insert.run({
+                    user_id: userId,
                     date: tx.date,
                     description: tx.description,
                     amount: tx.amount,
@@ -67,11 +68,12 @@ router.post('/upload', (req, res) => {
 
 // GET /api/transactions
 // Optional query params: startDate, endDate, category
-router.get('/', (req, res) => {
+router.get('/', authenticateToken, (req: AuthRequest, res: Response) => {
     try {
+        const userId = req.user!.id;
         const { startDate, endDate, category } = req.query;
-        let query = 'SELECT * FROM transactions WHERE 1=1';
-        const params: any[] = [];
+        let query = 'SELECT * FROM transactions WHERE user_id = ?';
+        const params: any[] = [userId];
 
         if (startDate) {
             query += ' AND date >= ?';
@@ -100,17 +102,16 @@ router.get('/', (req, res) => {
 
 // GET /api/transactions/summary
 // Basic aggregation for dashboard
-// GET /api/transactions/summary
-// Basic aggregation for dashboard
-router.get('/summary', (req, res) => {
+router.get('/summary', authenticateToken, (req: AuthRequest, res: Response) => {
     try {
+        const userId = req.user!.id;
         const { month, year } = req.query;
         let query = `
       SELECT category, SUM(amount) as total, COUNT(*) as count 
       FROM transactions 
-      WHERE amount < 0
+      WHERE user_id = ? AND amount < 0
     `;
-        const params: any[] = [];
+        const params: any[] = [userId];
 
         if (year) {
             query += " AND strftime('%Y', date) = ?";
@@ -140,15 +141,16 @@ router.get('/summary', (req, res) => {
 
 // GET /api/transactions/monthly-summary
 // For bar graph
-router.get('/monthly-summary', (req, res) => {
+router.get('/monthly-summary', authenticateToken, (req: AuthRequest, res: Response) => {
     try {
+        const userId = req.user!.id;
         const { year } = req.query;
         let query = `
       SELECT strftime('%Y-%m', date) as month, SUM(ABS(amount)) as total
       FROM transactions
-      WHERE amount < 0
+      WHERE user_id = ? AND amount < 0
     `;
-        const params: any[] = [];
+        const params: any[] = [userId];
 
         if (year) {
             query += " AND strftime('%Y', date) = ?";
@@ -184,8 +186,9 @@ router.get('/monthly-summary', (req, res) => {
 
 // GET /api/transactions/analytics
 // Aggregated Income vs Expense per month
-router.get('/analytics', (req, res) => {
+router.get('/analytics', authenticateToken, (req: AuthRequest, res: Response) => {
     try {
+        const userId = req.user!.id;
         const { year } = req.query;
         let query = `
             SELECT 
@@ -193,9 +196,9 @@ router.get('/analytics', (req, res) => {
                 SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) as income,
                 SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END) as expense
             FROM transactions
-            WHERE 1=1
+            WHERE user_id = ?
         `;
-        const params: any[] = [];
+        const params: any[] = [userId];
 
         if (year) {
             query += " AND strftime('%Y', date) = ?";
@@ -227,14 +230,15 @@ router.get('/analytics', (req, res) => {
 });
 
 // GET /api/transactions/ml-insights
-router.get('/ml-insights', (req, res) => {
+router.get('/ml-insights', authenticateToken, (req: AuthRequest, res: Response) => {
     try {
+        const userId = req.user!.id;
         const { year, month } = req.query;
         if (!year || !month) {
             return res.status(400).json({ error: 'Year and Month required' });
         }
 
-        const insights = getMLInsights(year as string, month as string);
+        const insights = getMLInsights(userId, year as string, month as string);
         res.json(insights);
     } catch (error) {
         console.error('ML Insights error:', error);
@@ -243,10 +247,11 @@ router.get('/ml-insights', (req, res) => {
 });
 
 // GET /api/transactions/years
-router.get('/years', (req, res) => {
+router.get('/years', authenticateToken, (req: AuthRequest, res: Response) => {
     try {
-        const stmt = db.prepare("SELECT DISTINCT strftime('%Y', date) as year FROM transactions WHERE date IS NOT NULL ORDER BY year DESC");
-        const rows = stmt.all() as { year: string }[];
+        const userId = req.user!.id;
+        const stmt = db.prepare("SELECT DISTINCT strftime('%Y', date) as year FROM transactions WHERE user_id = ? AND date IS NOT NULL ORDER BY year DESC");
+        const rows = stmt.all(userId) as { year: string }[];
         res.json(rows.map(r => r.year));
     } catch (error) {
         console.error('Years fetch error:', error);
@@ -255,17 +260,16 @@ router.get('/years', (req, res) => {
 });
 
 // POST /api/transactions/manual
-router.post('/manual', (req, res) => {
+router.post('/manual', authenticateToken, validate(manualTransactionSchema), (req: AuthRequest, res: Response) => {
     try {
+        const userId = req.user!.id;
         const { date, description, amount, category, type } = req.body;
 
-        if (!date || !amount || !category) {
-            return res.status(400).json({ error: 'Missing required fields' });
-        }
+        // Manual check removed as Zod handles it
 
         const insert = db.prepare(`
-            INSERT INTO transactions (date, description, amount, category, merchant, transaction_type, is_recurring)
-            VALUES (?, ?, ?, ?, ?, ?, 0)
+            INSERT INTO transactions (user_id, date, description, amount, category, merchant, transaction_type, is_recurring)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 0)
         `);
 
         // If amount is positive but type is expense, make it negative.
@@ -277,7 +281,7 @@ router.post('/manual', (req, res) => {
 
         const merchant = description; // Simple default
 
-        const info = insert.run(date, description, finalAmount, category, merchant, type);
+        const info = insert.run(userId, date, description, finalAmount, category, merchant, type);
         res.json({ success: true, id: info.lastInsertRowid });
 
     } catch (error) {
@@ -287,11 +291,12 @@ router.post('/manual', (req, res) => {
 });
 
 // GET /api/transactions/categories
-router.get('/categories', (req, res) => {
+router.get('/categories', authenticateToken, (req: AuthRequest, res: Response) => {
     try {
-        // Get distinct categories from existing transactions
-        const stmt = db.prepare("SELECT DISTINCT category FROM transactions WHERE category IS NOT NULL ORDER BY category ASC");
-        const rows = stmt.all() as { category: string }[];
+        const userId = req.user!.id;
+        // Get distinct categories from existing transactions for this user
+        const stmt = db.prepare("SELECT DISTINCT category FROM transactions WHERE user_id = ? AND category IS NOT NULL ORDER BY category ASC");
+        const rows = stmt.all(userId) as { category: string }[];
 
         // Default categories if none exist
         const defaults = ['Food & Dining', 'Shopping', 'Transport', 'Utilities', 'Health', 'Entertainment', 'Income', 'Transfer'];

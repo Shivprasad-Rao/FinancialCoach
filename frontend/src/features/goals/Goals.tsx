@@ -64,7 +64,7 @@ export function Goals() {
     };
 
     const confirmDelete = async () => {
-        if (!goalToDelete) return;
+        if (goalToDelete === null) return;
         try {
             await endpoints.deleteGoal(goalToDelete);
             setGoalToDelete(null);
@@ -258,7 +258,7 @@ export function Goals() {
             </div>
 
             {/* Delete Confirmation Modal */}
-            {goalToDelete && (
+            {goalToDelete !== null && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in">
                     <div className="bg-card p-8 rounded-2xl shadow-xl w-full max-w-sm text-center animate-in zoom-in-95 duration-200 border border-border">
                         <div className="mx-auto w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center mb-4">

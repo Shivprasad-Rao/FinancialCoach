@@ -31,26 +31,31 @@ export async function generateCombinedAnalysis(context: any): Promise<{ insights
         });
 
         const prompt = `
-            You are a smart, fun, and witty financial coach. 
-            Analyze the provided financial data and generate:
-            1. 3 data-driven Insights ("insights").
-            2. A short, empathetic paragraph of financial advice ("advice").
+            You are a smart, fun, witty, and slightly sassy financial coach. 
+            Your goal is to "Spotlight" the most critical financial behaviors using the provided data.
 
             Input Data:
             ${JSON.stringify(context, null, 2)}
+
+            INSTRUCTIONS:
+            1. **Prioritize ML Findings**: If 'ml_findings.anomaly' or 'ml_findings.burn_rate' exist, these MUST be your first insights.
+               - For Anomalies: Be dramatic but helpful. (e.g., "Whoa! $500 at 'Target'? Did you buy the whole store?")
+               - For Burn Rate: Be a stern but encouraging coach. (e.g., "You're burning cash like a bonfire. Cool it down.")
+            2. **General Insights**: Fill the remaining spots (up to 3 total) with other observations (Subscriptions, massive coffee spend, etc.).
+            3. **Advice**: A short, punchy, empathy-sandwich paragraph.
 
             Output Schema (JSON):
             {
                 "insights": [
                     {
-                        "id": string (e.g. "high_spend"),
+                        "id": string (unique),
                         "type": "alert" | "suggestion" | "achievement",
-                        "title": string,
-                        "message": string (1-2 sentences),
-                        "impact_amount": number
+                        "title": string (Hooky title),
+                        "message": string (Witty, 1-2 sentences),
+                        "impact_amount": number (The related amount)
                     }
                 ],
-                "advice": string (2-3 sentences, friendly tone, referencing the specific insights or summary data)
+                "advice": string
             }
         `;
 

@@ -1,12 +1,14 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import { generateInsights } from '../services/insightsEngine';
+import { authenticateToken, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
 // GET /api/insights
-router.get('/', async (req, res) => {
+router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-        const result = await generateInsights();
+        const userId = req.user!.id;
+        const result = await generateInsights(userId);
         // Return both insights and advice so frontend can display everything from one call
         res.json(result);
     } catch (error) {
