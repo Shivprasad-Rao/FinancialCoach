@@ -25,6 +25,11 @@ export function Goals() {
     const [target, setTarget] = useState('');
     const [deadline, setDeadline] = useState('');
 
+    // Custom Money Modal State
+    const [showAddMoneyModal, setShowAddMoneyModal] = useState(false);
+    const [addMoneyGoalId, setAddMoneyGoalId] = useState<number | null>(null);
+    const [customAmount, setCustomAmount] = useState('');
+
     const fetchGoals = () => {
         endpoints.getGoals()
             .then(res => setGoals(res.data))
@@ -227,6 +232,16 @@ export function Goals() {
                                     </button>
                                     <button
                                         onClick={() => {
+                                            setAddMoneyGoalId(goal.id);
+                                            setShowAddMoneyModal(true);
+                                        }}
+                                        className="flex-1 text-sm font-medium border border-input rounded-lg px-3 py-2 hover:bg-secondary flex items-center justify-center transition-colors text-foreground"
+                                    >
+                                        <Plus className="w-4 h-4 mr-1.5 text-primary" />
+                                        Custom
+                                    </button>
+                                    <button
+                                        onClick={() => {
                                             const diff = goal.target_amount - goal.current_amount;
                                             updateProgress(goal.id, goal.current_amount, diff);
                                         }}
@@ -282,6 +297,82 @@ export function Goals() {
                                 Yes, Delete
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Add Custom Money Modal */}
+            {showAddMoneyModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in">
+                    <div className="bg-card p-8 rounded-2xl shadow-xl w-full max-w-sm animate-in zoom-in-95 duration-200 border border-border relative">
+                        <button
+                            onClick={() => {
+                                setShowAddMoneyModal(false);
+                                setCustomAmount('');
+                                setAddMoneyGoalId(null);
+                            }}
+                            className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                        <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                            <TrendingUp className="w-6 h-6 text-primary" />
+                        </div>
+                        <h3 className="text-xl font-bold text-foreground mb-2 text-center">Add Custom Amount</h3>
+                        <p className="text-muted-foreground mb-6 text-center">
+                            Enter the amount you want to contribute to this goal.
+                        </p>
+
+                        <form onSubmit={(e) => {
+                            e.preventDefault();
+                            if (addMoneyGoalId !== null && customAmount) {
+                                const goal = goals.find(g => g.id === addMoneyGoalId);
+                                if (goal) {
+                                    updateProgress(goal.id, goal.current_amount, parseFloat(customAmount));
+                                    setShowAddMoneyModal(false);
+                                    setCustomAmount('');
+                                    setAddMoneyGoalId(null);
+                                }
+                            }
+                        }}>
+                            <div className="mb-6">
+                                <label className="block text-sm font-medium mb-1 text-foreground">Amount</label>
+                                <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                                    <input
+                                        type="number"
+                                        placeholder="0.00"
+                                        step="0.01"
+                                        min="0.01"
+                                        className="w-full border border-input rounded-lg pl-8 pr-3 py-3 bg-secondary text-foreground focus:ring-2 focus:ring-primary outline-none"
+                                        value={customAmount}
+                                        onChange={e => setCustomAmount(e.target.value)}
+                                        required
+                                        autoFocus
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 justify-end">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowAddMoneyModal(false);
+                                        setCustomAmount('');
+                                        setAddMoneyGoalId(null);
+                                    }}
+                                    className="px-5 py-2.5 rounded-xl border border-input text-foreground font-medium hover:bg-muted transition-colors w-full"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-5 py-2.5 rounded-xl bg-primary text-primary-foreground font-medium hover:bg-primary/90 shadow-sm transition-colors w-full"
+                                >
+                                    Add Amount
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}
